@@ -1,0 +1,1994 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>중세 카지노 바카라 × 영웅 디펜스</title>
+<style>
+  :root {
+    --bg-dark: #140f12;
+    --stone: #231b20;
+    --stone-light: #352930;
+    --velvet: #4a1019;
+    --velvet-dark: #2c080e;
+    --brass: #d4a03c;
+    --brass-bright: #ffd369;
+    --brass-dark: #7a5518;
+    --parchment: #f0dfb8;
+    --parchment-dark: #c9b07d;
+    --text: #f7ecd5;
+    --red: #e64545;
+    --blue: #4ea8de;
+    --green: #4ad66d;
+    --purple: #b565f7;
+  }
+  * { box-sizing: border-box; user-select: none; }
+  body {
+    margin: 0;
+    background: var(--bg-dark);
+    color: var(--text);
+    font-family: 'Pretendard', 'Malgun Gothic', 'Courier New', monospace;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* Top HUD */
+  .hud {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 14px;
+    background: linear-gradient(180deg, #2b2024, #1b1316);
+    border-bottom: 3px solid var(--brass-dark);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.7);
+    z-index: 10;
+    flex-shrink: 0;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .hud-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .stat-pill {
+    background: #171114;
+    border: 2px solid var(--brass-dark);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 13px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: inset 0 0 6px rgba(0,0,0,0.8);
+  }
+  .gold-text { color: var(--brass-bright); }
+  .hp-text { color: #ff6b6b; }
+  .shield-text { color: #74c0fc; }
+  .wave-text { color: #ffd43b; }
+
+  .btn {
+    background: linear-gradient(180deg, #5c3d1e, #3b240e);
+    color: var(--parchment);
+    border: 2px solid var(--brass);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-weight: bold;
+    font-size: 13px;
+    cursor: pointer;
+    transition: transform 0.08s, filter 0.1s;
+    text-shadow: 1px 1px 0 #000;
+  }
+  .btn:hover:not(:disabled) { filter: brightness(1.18); transform: translateY(-1px); }
+  .btn:active:not(:disabled) { transform: translateY(1px); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-gold { background: linear-gradient(180deg, #d4a03c, #8c5e14); color: #1b1005; text-shadow: none; }
+  .btn-red { background: linear-gradient(180deg, #b82929, #6e1212); border-color: #ff8787; }
+  .btn-blue { background: linear-gradient(180deg, #25689e, #12395c); border-color: #74c0fc; }
+  .btn-green { background: linear-gradient(180deg, #228044, #0f4722); border-color: #69db7c; }
+  .btn-purple { background: linear-gradient(180deg, #7432a8, #421766); border-color: #d0bfff; }
+
+  /* Upper Canvas Arena (54%) */
+  .arena-wrap {
+    position: relative;
+    flex: 54;
+    min-height: 220px;
+    background: #120d10;
+    border-bottom: 4px solid var(--brass);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  canvas#gameCanvas {
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    display: block;
+  }
+  .relic-bar {
+    position: absolute;
+    top: 8px;
+    left: 10px;
+    display: flex;
+    gap: 6px;
+    pointer-events: auto;
+  }
+  .relic-chip {
+    background: rgba(20, 14, 18, 0.85);
+    border: 2px solid var(--brass);
+    border-radius: 6px;
+    padding: 3px 7px;
+    font-size: 12px;
+    color: var(--brass-bright);
+    cursor: help;
+  }
+  .roster-bar {
+    position: absolute;
+    bottom: 6px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    pointer-events: auto;
+  }
+  .hero-badge {
+    background: rgba(18, 12, 16, 0.88);
+    border: 1px solid var(--brass-dark);
+    border-radius: 5px;
+    padding: 2px 7px;
+    font-size: 11px;
+    white-space: nowrap;
+    color: #eee;
+  }
+  .hero-badge.t3 { border-color: #4dabf7; color: #a5d8ff; }
+  .hero-badge.t4 { border-color: #da77f2; color: #eebefa; }
+  .hero-badge.t5 { border-color: #ffd43b; color: #fff3bf; box-shadow: 0 0 8px rgba(255,212,59,0.5); }
+
+  /* Cut-in Banner */
+  .cutin-banner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.5);
+    background: linear-gradient(90deg, transparent, rgba(20,8,12,0.95) 20%, rgba(20,8,12,0.95) 80%, transparent);
+    border-top: 3px solid var(--brass-bright);
+    border-bottom: 3px solid var(--brass-bright);
+    padding: 12px 60px;
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    z-index: 25;
+  }
+  .cutin-banner.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  .cutin-title { font-size: 26px; font-weight: 900; color: var(--brass-bright); letter-spacing: 2px; text-shadow: 2px 2px 0 #000, 0 0 12px #ff922b; }
+  .cutin-sub { font-size: 14px; color: #fff; margin-top: 4px; text-shadow: 1px 1px 0 #000; }
+
+  /* Lower Baccarat Table (46%) */
+  .table-wrap {
+    flex: 46;
+    background: radial-gradient(circle at 50% 35%, var(--velvet), var(--velvet-dark) 80%);
+    padding: 10px 14px;
+    display: grid;
+    grid-template-columns: 230px 1fr 270px;
+    gap: 12px;
+    align-items: stretch;
+    overflow-y: auto;
+    box-shadow: inset 0 8px 20px rgba(0,0,0,0.65);
+  }
+  .panel {
+    background: rgba(18, 10, 12, 0.72);
+    border: 2px solid var(--brass-dark);
+    border-radius: 10px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .panel-title {
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--brass-bright);
+    border-bottom: 1px solid rgba(212,160,60,0.3);
+    padding-bottom: 4px;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* Shoe Counter */
+  .shoe-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+  .shoe-cell {
+    background: #1c1317;
+    border: 1px solid #4a353c;
+    border-radius: 4px;
+    text-align: center;
+    padding: 3px 2px;
+    font-size: 11px;
+  }
+  .shoe-cell .num { color: var(--brass-bright); font-weight: bold; display: block; }
+  .shoe-cell .cnt { color: #ccc; font-size: 10px; }
+  .peek-box {
+    background: #1a1024;
+    border: 1px dashed var(--purple);
+    border-radius: 6px;
+    padding: 4px 6px;
+    font-size: 11px;
+    color: #e5dbff;
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+
+  /* Center Cards */
+  .baccarat-center {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .hands-row {
+    display: flex;
+    width: 100%;
+    justify-content: space-around;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+  }
+  .hand-box {
+    flex: 1;
+    background: rgba(0,0,0,0.32);
+    border: 2px solid rgba(212,160,60,0.35);
+    border-radius: 10px;
+    padding: 8px;
+    text-align: center;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .hand-box.winner { border-color: var(--brass-bright); box-shadow: 0 0 14px rgba(255,211,105,0.45); }
+  .hand-label { font-size: 13px; font-weight: bold; display: flex; align-items: center; gap: 6px; }
+  .score-badge {
+    background: #140f12;
+    border: 2px solid var(--brass);
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: var(--brass-bright);
+  }
+  .cards-slot { display: flex; gap: 6px; justify-content: center; margin-top: 6px; min-height: 70px; align-items: center; }
+  .card {
+    width: 48px;
+    height: 68px;
+    background: linear-gradient(135deg, #fbf3de, #e3cf9d);
+    border: 2px solid #8a6424;
+    border-radius: 6px;
+    color: #1c1414;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 16px;
+    box-shadow: 2px 3px 6px rgba(0,0,0,0.6);
+    animation: flipIn 0.22s ease-out;
+  }
+  .card.red { color: #b81d24; }
+  .card .suit { font-size: 14px; line-height: 1; }
+  @keyframes flipIn {
+    from { transform: rotateY(90deg) scale(0.8); opacity: 0; }
+    to { transform: rotateY(0deg) scale(1); opacity: 1; }
+  }
+  .log-bar {
+    width: 100%;
+    text-align: center;
+    font-size: 12px;
+    color: var(--parchment);
+    background: rgba(0,0,0,0.45);
+    border-radius: 6px;
+    padding: 4px 8px;
+    margin-top: 6px;
+  }
+
+  /* Betting Controls */
+  .bet-targets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 6px; }
+  .bet-target {
+    padding: 7px 4px;
+    border: 2px solid #594130;
+    border-radius: 6px;
+    background: #1d1216;
+    color: #ddd;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: center;
+  }
+  .bet-target.active.p { background: #16446b; border-color: #74c0fc; color: #fff; }
+  .bet-target.active.b { background: #751818; border-color: #ff8787; color: #fff; }
+  .bet-target.active.t { background: #175c32; border-color: #69db7c; color: #fff; }
+
+  .bet-amounts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 8px; }
+  .amt-btn {
+    padding: 5px 2px;
+    font-size: 11px;
+    font-weight: bold;
+    background: #2b1d17;
+    color: var(--brass-bright);
+    border: 1px solid var(--brass-dark);
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  .amt-btn.active { background: var(--brass); color: #1a1005; border-color: #fff; }
+
+  /* Modals */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 4, 6, 0.82);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 16px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: linear-gradient(180deg, #2b1f23, #191114);
+    border: 3px solid var(--brass);
+    border-radius: 12px;
+    max-width: 780px;
+    width: 100%;
+    max-height: 88vh;
+    overflow-y: auto;
+    padding: 16px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.9);
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--brass-dark);
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+  }
+  .modal-header h2 { margin: 0; font-size: 18px; color: var(--brass-bright); }
+
+  /* Shop Tabs */
+  .tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .tab-btn {
+    flex: 1;
+    min-width: 110px;
+    padding: 8px;
+    background: #1d1418;
+    border: 2px solid var(--brass-dark);
+    border-radius: 6px;
+    color: #ccc;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .tab-btn.active { background: var(--brass); color: #1b1005; border-color: #fff3bf; }
+
+  /* Slot Machine */
+  .slot-box {
+    background: linear-gradient(180deg, #3d2817, #21150b);
+    border: 4px solid var(--brass);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+  }
+  .reels {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin: 14px 0;
+  }
+  .reel {
+    width: 86px;
+    height: 86px;
+    background: #140d0a;
+    border: 3px solid var(--brass-bright);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    box-shadow: inset 0 0 14px #000;
+  }
+  .shop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 10px;
+  }
+  .shop-card {
+    background: #1d1418;
+    border: 2px solid #4e3930;
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .shop-card h4 { margin: 0; font-size: 14px; color: var(--brass-bright); }
+  .shop-card p { margin: 0; font-size: 12px; color: #d6c8b4; line-height: 1.4; }
+
+  /* Branch Choice */
+  .branch-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .branch-card {
+    background: #1c1317;
+    border: 2px solid var(--brass);
+    border-radius: 10px;
+    padding: 12px;
+    cursor: pointer;
+    transition: transform 0.12s, background 0.12s;
+    text-align: center;
+  }
+  .branch-card:hover { transform: translateY(-3px); background: #2c1e24; border-color: #fff3bf; }
+
+  @media (max-width: 900px) {
+    .table-wrap { grid-template-columns: 1fr; }
+    .branch-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP HUD -->
+<div class="hud">
+  <div class="hud-group">
+    <div class="stat-pill wave-text">🏰 WAVE <span id="uiWave">1</span></div>
+    <div class="stat-pill hp-text">❤️ 성채 <span id="uiHp">100/100</span></div>
+    <div class="stat-pill shield-text">🛡️ 실드 <span id="uiShield">0</span></div>
+    <div class="stat-pill gold-text">🪙 <span id="uiGold">150</span> G</div>
+  </div>
+  <div class="hud-group">
+    <button class="btn btn-gold" id="btnQuickSummon">⚔️ 영웅 소환 (50G)</button>
+    <button class="btn btn-purple" id="btnOpenShop">🎰 중세 카지노 상점</button>
+    <button class="btn" id="btnMute">🔊 소리 ON</button>
+  </div>
+</div>
+
+<!-- UPPER CANVAS ARENA -->
+<div class="arena-wrap">
+  <canvas id="gameCanvas" width="960" height="340"></canvas>
+  <div class="relic-bar" id="relicBar"></div>
+  <div class="roster-bar" id="rosterBar"></div>
+  <div class="cutin-banner" id="cutinBanner">
+    <div class="cutin-title" id="cutinTitle">CLASS UP!</div>
+    <div class="cutin-sub" id="cutinSub">태양의 검성 각성!</div>
+  </div>
+</div>
+
+<!-- LOWER BACCARAT TABLE -->
+<div class="table-wrap">
+  <!-- LEFT: SHOE COUNTER & PEEK -->
+  <div class="panel">
+    <div class="panel-title">
+      <span>🃏 남은 덱(슈) 카운터</span>
+      <span id="uiDeckCount">52장</span>
+    </div>
+    <div class="shoe-grid" id="shoeGrid"></div>
+    <div class="peek-box" id="peekBox">🔮 예언의 수정구 (웨이브당 1회)</div>
+    <button class="btn btn-purple" id="btnPeek" style="width:100%">🔮 다음 4장 미리보기</button>
+  </div>
+
+  <!-- CENTER: PLAYER VS BANKER -->
+  <div class="panel baccarat-center">
+    <div class="hands-row">
+      <div class="hand-box" id="playerBox">
+        <div class="hand-label" style="color:#74c0fc">
+          PLAYER <span class="score-badge" id="playerScore">-</span>
+        </div>
+        <div class="cards-slot" id="playerCards"></div>
+      </div>
+      <div style="font-weight:900; color:var(--brass-bright); font-size:18px;">VS</div>
+      <div class="hand-box" id="bankerBox">
+        <div class="hand-label" style="color:#ff8787">
+          BANKER <span class="score-badge" id="bankerScore">-</span>
+        </div>
+        <div class="cards-slot" id="bankerCards"></div>
+      </div>
+    </div>
+    <div class="log-bar" id="battleLog">배팅 대상과 금액을 선택하고 [딜(DEAL)]을 눌러 전투를 시작하세요!</div>
+  </div>
+
+  <!-- RIGHT: BETTING CONTROLS -->
+  <div class="panel">
+    <div class="panel-title">
+      <span>💰 배팅 & 전투 발동</span>
+      <span id="uiBuffBadge" style="color:#69db7c"></span>
+    </div>
+    <div class="bet-targets">
+      <div class="bet-target active p" data-target="player">PLAYER<br><small>2배 · 총공격</small></div>
+      <div class="bet-target b" data-target="banker">BANKER<br><small>2배 · 총공격</small></div>
+      <div class="bet-target t" data-target="tie">TIE<br><small>8배 · 궁극기</small></div>
+    </div>
+    <div class="bet-amounts">
+      <button class="amt-btn active" data-amt="10">10G</button>
+      <button class="amt-btn" data-amt="25">25G</button>
+      <button class="amt-btn" data-amt="50">50G</button>
+      <button class="amt-btn" data-amt="all">ALL-IN</button>
+    </div>
+    <button class="btn btn-gold" id="btnDeal" style="width:100%; padding:10px; font-size:15px;">🎴 딜 (DEAL) & 공격!</button>
+  </div>
+</div>
+
+<!-- SHOP MODAL -->
+<div class="modal-backdrop" id="shopModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>🕯️ 지하 중세 카지노 상점 (보유: <span id="shopGold">0</span> G)</h2>
+      <button class="btn btn-red" id="btnCloseShop">닫기 ✕</button>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="slot">🎰 황동 슬롯머신</button>
+      <button class="tab-btn" data-tab="relic">📜 유물 & 덱 주문서</button>
+      <button class="tab-btn" data-tab="prob">⚖️ 확률 조작</button>
+      <button class="tab-btn" data-tab="forge">⚒️ 영웅 대장간</button>
+    </div>
+    <div id="shopContent"></div>
+  </div>
+</div>
+
+<!-- BRANCH SELECTION MODAL -->
+<div class="modal-backdrop" id="branchModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="branchModalTitle">✨ 3단계 전직 분기 선택!</h2>
+    </div>
+    <p style="font-size:13px; color:#e3d5be; margin-top:0;">2단계 영웅 3명이 합체했습니다. 원하는 특화 전직 루트를 선택하세요!</p>
+    <div class="branch-grid" id="branchGrid"></div>
+  </div>
+</div>
+
+<!-- GAME OVER MODAL -->
+<div class="modal-backdrop" id="gameOverModal">
+  <div class="modal" style="max-width:420px; text-align:center;">
+    <h2 style="color:#ff6b6b; font-size:24px;">💀 성채 함락!</h2>
+    <p id="gameOverText" style="font-size:14px; color:#eee;"></p>
+    <button class="btn btn-gold" onclick="location.reload()" style="padding:10px 24px; font-size:15px;">🔄 다시 도전하기</button>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   1. WEB AUDIO API RETRO 16-BIT SYNTH SOUND ENGINE
+   ========================================================= */
+const SFX = {
+  ctx: null,
+  muted: false,
+  init() {
+    if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+  },
+  tone(freq, dur, type='square', vol=0.08, slide=null, delay=0) {
+    if (this.muted) return;
+    this.init();
+    const now = this.ctx.currentTime + delay;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, now);
+    if (slide) osc.frequency.exponentialRampToValueAtTime(slide, now + dur);
+    gain.gain.setValueAtTime(vol, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + dur);
+  },
+  card() { this.tone(320, 0.06, 'triangle', 0.07, 640); },
+  chip() { this.tone(1100, 0.05, 'sine', 0.06, 1500); },
+  hit() { this.tone(160, 0.09, 'sawtooth', 0.09, 55); },
+  magic() { this.tone(520, 0.16, 'triangle', 0.08, 880); },
+  coin() { this.tone(988, 0.06, 'square', 0.05, null, 0); this.tone(1319, 0.12, 'square', 0.05, null, 0.06); },
+  fail() { this.tone(220, 0.18, 'sawtooth', 0.08, 110); this.tone(150, 0.25, 'sawtooth', 0.08, 80, 0.15); },
+  slotTick() { this.tone(680, 0.03, 'square', 0.04); },
+  fanfare() {
+    [523, 659, 784, 1046].forEach((f, i) => this.tone(f, 0.18, 'square', 0.08, null, i * 0.08));
+  },
+  classUp() {
+    [392, 523, 659, 784, 1046, 1318].forEach((f, i) => this.tone(f, 0.22, 'triangle', 0.1, null, i * 0.07));
+  }
+};
+
+/* =========================================================
+   2. HERO TREE & GAME DATA
+   ========================================================= */
+const HERO_DB = {
+  // KNIGHT
+  knight_1: { id:'knight_1', base:'knight', tier:1, name:'견습 기사', atk:14, color:'#a5b1c2', accent:'#4b6584', desc:'전방 근접 베기', next:'knight_2' },
+  knight_2: { id:'knight_2', base:'knight', tier:2, name:'용병 기사', atk:28, color:'#d1d8e0', accent:'#3867d6', desc:'강화된 근접 베기', branches:['knight_def_3','knight_agg_3','knight_atk_3'] },
+  knight_def_3: { id:'knight_def_3', base:'knight', branch:'def', tier:3, name:'철갑 기사', atk:38, color:'#74c0fc', accent:'#1971c2', desc:'성채 실드 +12 생성', next:'knight_def_4' },
+  knight_def_4: { id:'knight_def_4', base:'knight', branch:'def', tier:4, name:'성채 수호자', atk:65, color:'#4dabf7', accent:'#1864ab', desc:'성채 실드 +25 · 각성: 실드 유지 3연승', next:'knight_def_5', awakenCond:'실드 유지 3연승' },
+  knight_def_5: { id:'knight_def_5', base:'knight', branch:'def', tier:5, name:'불멸의 이지스', atk:120, color:'#a5d8ff', accent:'#ffd43b', desc:'성채 실드 +50 · 절대 방어', aura:'#74c0fc' },
+
+  knight_agg_3: { id:'knight_agg_3', base:'knight', branch:'agg', tier:3, name:'선봉 기사', atk:42, color:'#ff8787', accent:'#c92a2a', desc:'광역 도발(적 발묶기)', next:'knight_agg_4' },
+  knight_agg_4: { id:'knight_agg_4', base:'knight', branch:'agg', tier:4, name:'광기의 도발자', atk:72, color:'#ff6b6b', accent:'#a61e4d', desc:'도발+반사+충격파 · 각성: 타이 적중', next:'knight_agg_5', awakenCond:'타이 적중' },
+  knight_agg_5: { id:'knight_agg_5', base:'knight', branch:'agg', tier:5, name:'전장의 군주', atk:145, color:'#ffa8a8', accent:'#ffd43b', desc:'전장 도발+기절 충격파', aura:'#ff6b6b' },
+
+  knight_atk_3: { id:'knight_atk_3', base:'knight', branch:'atk', tier:3, name:'검투 기사', atk:58, color:'#ffd43b', accent:'#e67700', desc:'전방 광역 빛의 검기', next:'knight_atk_4' },
+  knight_atk_4: { id:'knight_atk_4', base:'knight', branch:'atk', tier:4, name:'광전사', atk:105, color:'#fcc419', accent:'#d9480f', desc:'거대 검기+처형 · 각성: 내추럴 9 적중', next:'knight_atk_5', awakenCond:'내추럴 9 적중' },
+  knight_atk_5: { id:'knight_atk_5', base:'knight', branch:'atk', tier:5, name:'태양의 검성', atk:210, color:'#fff3bf', accent:'#ff922b', desc:'태양 검기 광역 처형', aura:'#ffd43b' },
+
+  // MAGE
+  mage_1: { id:'mage_1', base:'mage', tier:1, name:'견습 법사', atk:13, color:'#9775fa', accent:'#5f3dc4', desc:'단일 마법탄', next:'mage_2' },
+  mage_2: { id:'mage_2', base:'mage', tier:2, name:'용병 법사', atk:26, color:'#b197fc', accent:'#7950f2', desc:'소형 마력 폭발', branches:['mage_fire_3','mage_ice_3','mage_heal_3'] },
+  mage_fire_3: { id:'mage_fire_3', base:'mage', branch:'fire', tier:3, name:'불 법사', atk:48, color:'#ff922b', accent:'#d9480f', desc:'광역 화염구+화상(사망 시 연쇄폭발)', next:'mage_fire_4' },
+  mage_fire_4: { id:'mage_fire_4', base:'mage', branch:'fire', tier:4, name:'화염 대마도사', atk:88, color:'#fd7e14', accent:'#c92a2a', desc:'초화염구+화상폭발 · 각성: 내추럴 9', next:'mage_fire_5', awakenCond:'내추럴 9 적중' },
+  mage_fire_5: { id:'mage_fire_5', base:'mage', branch:'fire', tier:5, name:'인페르노 로드', atk:180, color:'#ffc078', accent:'#ff2a2a', desc:'전장 메테오+연쇄 화상폭발', aura:'#ff6b2b' },
+
+  mage_ice_3: { id:'mage_ice_3', base:'mage', branch:'ice', tier:3, name:'얼음 법사', atk:40, color:'#66d9e8', accent:'#0c8599', desc:'광역 슬로우+3중첩 빙결(치명타+50%)', next:'mage_ice_4' },
+  mage_ice_4: { id:'mage_ice_4', base:'mage', branch:'ice', tier:4, name:'서리 현자', atk:72, color:'#3bc9db', accent:'#0b7285', desc:'광역 빙결 · 각성: 타이 적중', next:'mage_ice_5', awakenCond:'타이 적중' },
+  mage_ice_5: { id:'mage_ice_5', base:'mage', branch:'ice', tier:5, name:'절대영도의 군주', atk:145, color:'#c5f6fa', accent:'#22b8cf', desc:'전장 빙결+쇄빙 폭딜', aura:'#66d9e8' },
+
+  mage_heal_3: { id:'mage_heal_3', base:'mage', branch:'heal', tier:3, name:'힐 법사', atk:30, color:'#69db7c', accent:'#2b8a3e', desc:'성채 회복+아군 공버프+코인 보너스', next:'mage_heal_4' },
+  mage_heal_4: { id:'mage_heal_4', base:'mage', branch:'heal', tier:4, name:'대사제', atk:55, color:'#51cf66', accent:'#2f9e44', desc:'대규모 치유+버프 · 각성: HP80%+ 3연승', next:'mage_heal_5', awakenCond:'성채 HP 80%+ 3연승' },
+  mage_heal_5: { id:'mage_heal_5', base:'mage', branch:'heal', tier:5, name:'생명의 대천사', atk:110, color:'#d3f9d8', accent:'#ffd43b', desc:'성채 대치유+아군 버프+코인+30%', aura:'#69db7c' },
+
+  // ARCHER
+  archer_1: { id:'archer_1', base:'archer', tier:1, name:'견습 궁수', atk:15, color:'#8ce99a', accent:'#2f9e44', desc:'기본 단일 화살', next:'archer_2' },
+  archer_2: { id:'archer_2', base:'archer', tier:2, name:'사냥꾼', atk:30, color:'#69db7c', accent:'#2b8a3e', desc:'빠른 화살 2연사', branches:['archer_poison_3','archer_elf_3','archer_sniper_3'] },
+  archer_poison_3: { id:'archer_poison_3', base:'archer', branch:'poison', tier:3, name:'독 사냥꾼', atk:38, color:'#a9e34b', accent:'#5c940d', desc:'무한중첩 독 DoT+방깎+사망 시 전염', next:'archer_poison_4' },
+  archer_poison_4: { id:'archer_poison_4', base:'archer', branch:'poison', tier:4, name:'맹독 추적자', atk:68, color:'#94d82d', accent:'#2b8a3e', desc:'강력한 맹독 전염 · 각성: 3번째 카드 역전승', next:'archer_poison_5', awakenCond:'3번째 카드 역전승' },
+  archer_poison_5: { id:'archer_poison_5', base:'archer', branch:'poison', tier:5, name:'역병의 인도자', atk:135, color:'#d8f5a2', accent:'#74b816', desc:'전장 맹독 폭풍+방어력 붕괴', aura:'#94d82d' },
+
+  archer_elf_3: { id:'archer_elf_3', base:'archer', branch:'elf', tier:3, name:'엘프 궁수', atk:44, color:'#63e6be', accent:'#0ca678', desc:'3발 다중공격+일직선 관통+방어구 관통', next:'archer_elf_4' },
+  archer_elf_4: { id:'archer_elf_4', base:'archer', branch:'elf', tier:4, name:'하이 엘프', atk:80, color:'#38d9a9', accent:'#099268', desc:'4발 관통 방관 · 각성: 내추럴(8·9) 적중', next:'archer_elf_5', awakenCond:'내추럴(8·9) 적중' },
+  archer_elf_5: { id:'archer_elf_5', base:'archer', branch:'elf', tier:5, name:'세계수의 신궁', atk:160, color:'#c3fae8', accent:'#ffd43b', desc:'5발 빛의 관통화살+방어력 100% 무시', aura:'#38d9a9' },
+
+  archer_sniper_3: { id:'archer_sniper_3', base:'archer', branch:'sniper', tier:3, name:'저격수', atk:64, color:'#e599f7', accent:'#862e9c', desc:'보스 우선 조준+확정 치명타', next:'archer_sniper_4' },
+  archer_sniper_4: { id:'archer_sniper_4', base:'archer', branch:'sniper', tier:4, name:'암살 궁수', atk:120, color:'#da77f2', accent:'#ae3ec9', desc:'보스 처형 극딜 · 각성: ALL-IN 적중', next:'archer_sniper_5', awakenCond:'ALL-IN 적중' },
+  archer_sniper_5: { id:'archer_sniper_5', base:'archer', branch:'sniper', tier:5, name:'심판의 사수', atk:250, color:'#f3d9fa', accent:'#ffd43b', desc:'절대 심판 저격(초극딜)', aura:'#da77f2' },
+};
+
+const RELIC_DB = [
+  { id:'chalice', icon:'🏆', name:'황금 성배', cost:120, desc:'내추럴(8·9) 적중 시 아군 대미지 2배 + 성채 HP 15 회복' },
+  { id:'scale', icon:'⚖️', name:'부러진 저울', cost:140, desc:'양쪽 점수 차가 1이어도 타이(무승부)로 판정' },
+  { id:'mask', icon:'🎭', name:'광대의 가면', cost:110, desc:'판에 깔린 0점 카드 1장당 이번 턴 치명타율 +15%' },
+  { id:'pouch', icon:'💰', name:'탐욕의 주머니', cost:100, desc:'몬스터 처치 시 획득 코인 +50% 증가' },
+];
+
+/* =========================================================
+   3. GAME STATE
+   ========================================================= */
+const state = {
+  gold: 150,
+  wave: 1,
+  castleHp: 100,
+  castleMaxHp: 100,
+  castleShield: 0,
+  winStreak: 0,
+  betTarget: 'player',
+  betAmount: 10,
+  isDealing: false,
+  peekUsed: false,
+  slotBuffTurns: 0,
+  deck: [],
+  heroes: [],
+  enemies: [],
+  projectiles: [],
+  particles: [],
+  floats: [],
+  coins: [],
+  relics: [],
+  upgrades: {
+    summonTier2: 0,
+    slotLuck: 0,
+    coinDrop: 0,
+    atkKnight: 0,
+    atkMage: 0,
+    atkArcher: 0,
+    critAll: 0
+  },
+  pendingBranchQueue: [],
+  gameOver: false,
+  cam: { x: 480, y: 170, zoom: 1, targetX: 480, targetY: 170, targetZoom: 1, shake: 0, hold: 0 },
+  hitStop: 0,
+  tick: 0
+};
+
+/* =========================================================
+   4. DECK & BACCARAT LOGIC
+   ========================================================= */
+function createShoe() {
+  const suits = ['♠','♥','♦','♣'];
+  const ranks = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+  const d = [];
+  for (let s of suits) {
+    for (let r of ranks) {
+      let val = 0;
+      if (r === 'A') val = 1;
+      else if (['10','J','Q','K'].includes(r)) val = 0;
+      else val = parseInt(r, 10);
+      d.push({ rank: r, suit: s, val, red: (s === '♥' || s === '♦') });
+    }
+  }
+  shuffle(d);
+  return d;
+}
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+function drawCard() {
+  if (state.deck.length < 6) {
+    state.deck = createShoe();
+    logMsg('🃏 덱이 6장 미만이라 새 슈(52장)를 셔플했습니다!');
+  }
+  const c = state.deck.pop();
+  updateShoeUI();
+  return c;
+}
+function handScore(cards) {
+  return cards.reduce((s, c) => s + c.val, 0) % 10;
+}
+
+/* =========================================================
+   5. HEROES, MERGING & AWAKENING
+   ========================================================= */
+function addHero(heroId, silent=false) {
+  const def = HERO_DB[heroId];
+  const hero = {
+    uid: Math.random().toString(36).slice(2),
+    id: heroId,
+    x: 130 + (state.heroes.length % 4) * 34 + (Math.random()*8-4),
+    y: 195 + Math.floor(state.heroes.length / 4) * 28,
+    animOffset: Math.random() * Math.PI * 2,
+    attackAnim: 0
+  };
+  state.heroes.push(hero);
+  repositionHeroes();
+  if (!silent) {
+    spawnBurst(hero.x, hero.y - 16, def.color, 14);
+    SFX.coin();
+  }
+  checkMerges();
+  updateRosterUI();
+}
+
+function repositionHeroes() {
+  const order = { knight: 0, archer: 1, mage: 2 };
+  state.heroes.sort((a, b) => {
+    const da = HERO_DB[a.id], db = HERO_DB[b.id];
+    if (db.tier !== da.tier) return db.tier - da.tier;
+    return order[da.base] - order[db.base];
+  });
+  state.heroes.forEach((h, idx) => {
+    const da = HERO_DB[h.id];
+    const col = da.base === 'knight' ? 2 : (da.base === 'archer' ? 1 : 0);
+    const sameColIdx = state.heroes.slice(0, idx).filter(x => HERO_DB[x.id].base === da.base).length;
+    h.x = 128 + col * 58 + (sameColIdx % 2) * 22;
+    h.y = 175 + Math.floor(sameColIdx / 2) * 38 + (sameColIdx % 2) * 14;
+    if (h.y > 295) h.y = 175 + (sameColIdx * 19) % 115;
+  });
+}
+
+function checkMerges() {
+  // Count by hero id
+  const counts = {};
+  state.heroes.forEach(h => { counts[h.id] = (counts[h.id] || 0) + 1; });
+  for (let id of Object.keys(counts)) {
+    const def = HERO_DB[id];
+    if (counts[id] >= 3 && def.tier < 5) {
+      if (def.tier === 2 && def.branches) {
+        if (!state.pendingBranchQueue.includes(id)) {
+          state.pendingBranchQueue.push(id);
+          openNextBranchModal();
+        }
+        return;
+      } else if (def.next) {
+        consumeHeroes(id, 3);
+        const nextDef = HERO_DB[def.next];
+        addHero(def.next, true);
+        const newH = state.heroes.find(h => h.id === def.next);
+        triggerZoom(newH ? newH.x : 220, newH ? newH.y : 220, 1.55, 45);
+        showCutin('CLASS UP!', `${def.name} ×3 → [${nextDef.name}] 승급!`);
+        SFX.classUp();
+        if (newH) spawnBurst(newH.x, newH.y - 20, '#ffd43b', 30);
+        return; // checkMerges called recursively via addHero
+      }
+    }
+  }
+}
+
+function consumeHeroes(id, count) {
+  let removed = 0;
+  state.heroes = state.heroes.filter(h => {
+    if (h.id === id && removed < count) { removed++; return false; }
+    return true;
+  });
+}
+
+function openNextBranchModal() {
+  if (state.pendingBranchQueue.length === 0) return;
+  const id = state.pendingBranchQueue[0];
+  const def = HERO_DB[id];
+  const modal = document.getElementById('branchModal');
+  document.getElementById('branchModalTitle').textContent = `✨ [${def.name}] 3단계 전직 분기 선택!`;
+  const grid = document.getElementById('branchGrid');
+  grid.innerHTML = '';
+  def.branches.forEach(bid => {
+    const bdef = HERO_DB[bid];
+    const t4 = HERO_DB[bdef.next];
+    const t5 = HERO_DB[t4.next];
+    const card = document.createElement('div');
+    card.className = 'branch-card';
+    card.innerHTML = `
+      <div style="font-size:17px; font-weight:900; color:${bdef.color}; margin-bottom:6px;">${bdef.name}</div>
+      <div style="font-size:11px; color:#aaa; margin-bottom:8px;">→ ${t4.name} → <b style="color:#ffd43b">${t5.name}</b></div>
+      <div style="font-size:12px; color:#eee; margin-bottom:8px;">${bdef.desc}</div>
+      <div style="font-size:11px; color:#ffd43b;">5단계 각성: ${t4.awakenCond}</div>
+    `;
+    card.onclick = () => {
+      state.pendingBranchQueue.shift();
+      modal.classList.remove('open');
+      consumeHeroes(id, 3);
+      addHero(bid, true);
+      const newH = state.heroes.find(h => h.id === bid);
+      triggerZoom(newH ? newH.x : 220, newH ? newH.y : 220, 1.65, 55);
+      showCutin('BRANCH EVOLUTION!', `[${bdef.name}] 전직 완료!`);
+      SFX.classUp();
+      if (newH) spawnBurst(newH.x, newH.y - 20, bdef.color, 36);
+      if (state.pendingBranchQueue.length > 0) openNextBranchModal();
+    };
+    grid.appendChild(card);
+  });
+  modal.classList.add('open');
+}
+
+function checkSpecialAwakening(ctx) {
+  // ctx: { isNatural9, isNatural, isTie, isThirdCardWin, isAllIn }
+  for (let h of state.heroes) {
+    const def = HERO_DB[h.id];
+    if (def.tier !== 4 || !def.next) continue;
+    let ok = false;
+    if (h.id === 'knight_def_4' && state.castleShield > 0 && state.winStreak >= 3) ok = true;
+    if (h.id === 'knight_agg_4' && ctx.isTie) ok = true;
+    if (h.id === 'knight_atk_4' && ctx.isNatural9) ok = true;
+    if (h.id === 'mage_fire_4' && ctx.isNatural9) ok = true;
+    if (h.id === 'mage_ice_4' && ctx.isTie) ok = true;
+    if (h.id === 'mage_heal_4' && (state.castleHp / state.castleMaxHp) >= 0.8 && state.winStreak >= 3) ok = true;
+    if (h.id === 'archer_poison_4' && ctx.isThirdCardWin) ok = true;
+    if (h.id === 'archer_elf_4' && ctx.isNatural) ok = true;
+    if (h.id === 'archer_sniper_4' && ctx.isAllIn) ok = true;
+
+    if (ok) {
+      const nextDef = HERO_DB[def.next];
+      h.id = def.next;
+      triggerZoom(h.x, h.y, 1.8, 70);
+      state.cam.shake = 14;
+      showCutin('⚡ 5단계 특수 각성! ⚡', `[${nextDef.name}] 강림!`);
+      SFX.classUp();
+      spawnBurst(h.x, h.y - 20, '#ffd43b', 50);
+      updateRosterUI();
+    }
+  }
+}
+
+/* =========================================================
+   6. ENEMIES & WAVE SPAWNER
+   ========================================================= */
+function spawnWave(waveNum) {
+  const isBossWave = waveNum % 5 === 0;
+  const count = isBossWave ? 4 : Math.min(8, 3 + Math.floor(waveNum * 0.8));
+  for (let i = 0; i < count; i++) {
+    const isBoss = isBossWave && i === count - 1;
+    const isArmored = !isBoss && waveNum >= 3 && Math.random() < 0.3;
+    const baseHp = Math.round((45 + waveNum * 28 + Math.pow(waveNum, 1.35) * 10) * (isBoss ? 3.8 : 1));
+    state.enemies.push({
+      uid: Math.random().toString(36).slice(2),
+      type: isBoss ? 'boss' : (isArmored ? 'armor' : (i % 2 === 0 ? 'goblin' : 'skeleton')),
+      name: isBoss ? `💀 보스(W${waveNum})` : (isArmored ? '철갑 오크' : (i % 2 === 0 ? '고블린' : '해골병')),
+      x: 780 + i * 42 + Math.random() * 14,
+      y: 185 + (i % 4) * 32 + (Math.random()*8-4),
+      hp: baseHp,
+      maxHp: baseHp,
+      armor: isBoss ? 25 : (isArmored ? 35 : 0),
+      atk: Math.round((6 + waveNum * 2) * (isBoss ? 2.2 : 1)),
+      speed: isBoss ? 32 : (isArmored ? 36 : 48),
+      reward: Math.round((14 + waveNum * 4) * (isBoss ? 4 : 1)),
+      burn: 0,
+      poison: 0,
+      freezeStacks: 0,
+      frozenTurns: 0,
+      taunted: 0,
+      flash: 0,
+      isBoss
+    });
+  }
+  state.peekUsed = false;
+  document.getElementById('btnPeek').disabled = false;
+  document.getElementById('peekBox').textContent = '🔮 예언의 수정구 (웨이브당 1회)';
+}
+
+/* =========================================================
+   7. BACCARAT DEAL -> COMBAT RESOLUTION
+   ========================================================= */
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function playBaccaratTurn() {
+  if (state.isDealing || state.gameOver) return;
+  if (state.enemies.length === 0) spawnWave(state.wave);
+
+  let bet = state.betAmount === 'all' ? state.gold : state.betAmount;
+  if (state.gold <= 0) {
+    bet = 0; // Allow desperate free spin with 0G so player isn't softlocked
+  } else if (bet > state.gold) {
+    bet = state.gold;
+  }
+
+  state.isDealing = true;
+  document.getElementById('btnDeal').disabled = true;
+  state.gold -= bet;
+  updateHUD();
+  SFX.chip();
+
+  const pSlot = document.getElementById('playerCards');
+  const bSlot = document.getElementById('bankerCards');
+  const pBox = document.getElementById('playerBox');
+  const bBox = document.getElementById('bankerBox');
+  pSlot.innerHTML = ''; bSlot.innerHTML = '';
+  pBox.classList.remove('winner'); bBox.classList.remove('winner');
+  document.getElementById('playerScore').textContent = '-';
+  document.getElementById('bankerScore').textContent = '-';
+
+  const pHand = [], bHand = [];
+  const dealTo = async (hand, slot, scoreEl) => {
+    const c = drawCard();
+    hand.push(c);
+    const el = document.createElement('div');
+    el.className = 'card' + (c.red ? ' red' : '');
+    el.innerHTML = `<div>${c.rank}</div><div class="suit">${c.suit}</div>`;
+    slot.appendChild(el);
+    scoreEl.textContent = handScore(hand);
+    SFX.card();
+    await delay(240);
+  };
+
+  await dealTo(pHand, pSlot, document.getElementById('playerScore'));
+  await dealTo(bHand, bSlot, document.getElementById('bankerScore'));
+  await dealTo(pHand, pSlot, document.getElementById('playerScore'));
+  await dealTo(bHand, bSlot, document.getElementById('bankerScore'));
+
+  let pScore = handScore(pHand);
+  let bScore = handScore(bHand);
+  const isNatural = (pScore >= 8 || bScore >= 8);
+  let thirdCardDrawn = false;
+
+  if (!isNatural) {
+    if (pScore <= 5) {
+      await dealTo(pHand, pSlot, document.getElementById('playerScore'));
+      pScore = handScore(pHand);
+      thirdCardDrawn = true;
+    }
+    if (bScore <= 5) {
+      await dealTo(bHand, bSlot, document.getElementById('bankerScore'));
+      bScore = handScore(bHand);
+      thirdCardDrawn = true;
+    }
+  }
+
+  const hasScale = state.relics.includes('scale');
+  let outcome = 'tie';
+  if (pScore === bScore || (hasScale && Math.abs(pScore - bScore) === 1)) {
+    outcome = 'tie';
+    pBox.classList.add('winner'); bBox.classList.add('winner');
+  } else if (pScore > bScore) {
+    outcome = 'player';
+    pBox.classList.add('winner');
+  } else {
+    outcome = 'banker';
+    bBox.classList.add('winner');
+  }
+
+  const allCards = [...pHand, ...bHand];
+  const zeroCount = allCards.filter(c => c.val === 0).length;
+  const hasPair = (pHand[0].rank === pHand[1].rank) || (bHand[0].rank === bHand[1].rank);
+  const won = (outcome === state.betTarget);
+  const isNatural9 = isNatural && Math.max(pScore, bScore) === 9;
+
+  if (won) {
+    state.winStreak++;
+    let mult = outcome === 'tie' ? 8 : 2;
+    if (state.slotBuffTurns > 0) {
+      if (isNatural || outcome === 'tie') mult *= 2;
+      state.slotBuffTurns--;
+    }
+    // Heal Mage coin bonus
+    const healBonus = state.heroes.reduce((acc, h) => {
+      const d = HERO_DB[h.id];
+      if (d.branch === 'heal') return acc + (d.tier === 5 ? 0.3 : 0.15);
+      return acc;
+    }, 0);
+    const payout = Math.round((bet > 0 ? bet * mult : 25) * (1 + healBonus));
+    state.gold += payout;
+    SFX.fanfare();
+
+    const dmgScale = 1 + Math.min(2.2, bet / 35) + (isNatural ? 0.5 : 0) + (outcome === 'tie' ? 1.2 : 0);
+    let extraLog = [];
+    if (isNatural && state.relics.includes('chalice')) {
+      state.castleHp = Math.min(state.castleMaxHp, state.castleHp + 15);
+      extraLog.push('🏆성배(2배+치유)');
+    }
+    if (outcome === 'tie') {
+      triggerZoom(520, 220, 1.45, 45);
+      showCutin('⚡ TIE ULTIMATE! ⚡', `8배 잭팟 (+${payout}G) + 전장 궁극기!`);
+    } else if (isNatural) {
+      triggerZoom(480, 220, 1.35, 30);
+      showCutin('✨ NATURAL HIT! ✨', `+${payout}G 획득! 강력 공격!`);
+    }
+
+    logMsg(`✅ 적중! (${outcome.toUpperCase()} 승) +${payout}G ${extraLog.join(' ')}`);
+    executeHeroAttacks({
+      dmgScale: dmgScale * (isNatural && state.relics.includes('chalice') ? 2 : 1),
+      isTieUlt: outcome === 'tie',
+      zeroCount,
+      hasPair,
+      thirdCardDrawn,
+      betTarget: state.betTarget,
+      isAllIn: state.betAmount === 'all' && bet > 0
+    });
+
+    checkSpecialAwakening({
+      isNatural9,
+      isNatural,
+      isTie: outcome === 'tie',
+      isThirdCardWin: thirdCardDrawn,
+      isAllIn: state.betAmount === 'all' && bet > 0
+    });
+  } else {
+    state.winStreak = 0;
+    SFX.fail();
+    logMsg(`❌ 배팅 실패! (결과: ${outcome.toUpperCase()}) 몬스터가 진격합니다!`);
+    executeEnemyTurn();
+  }
+
+  // Process DoTs (Burn / Poison) at end of every turn
+  processStatusDoTs(thirdCardDrawn);
+
+  // Check wave clear
+  if (state.enemies.length === 0 && !state.gameOver) {
+    const waveBonus = 30 + state.wave * 12;
+    state.gold += waveBonus;
+    showCutin(`🏰 WAVE ${state.wave} CLEAR!`, `보상 +${waveBonus}G · 다음 웨이브 출현!`);
+    SFX.fanfare();
+    state.wave++;
+    await delay(900);
+    spawnWave(state.wave);
+  }
+
+  updateHUD();
+  state.isDealing = false;
+  document.getElementById('btnDeal').disabled = false;
+}
+
+/* =========================================================
+   8. HERO ATTACKS, STATUS EFFECTS & ENEMY TURN
+   ========================================================= */
+function executeHeroAttacks(ctx) {
+  if (state.enemies.length === 0) return;
+
+  // Heal Mage party buff
+  let partyBuff = 1;
+  state.heroes.forEach(h => {
+    const d = HERO_DB[h.id];
+    if (d.branch === 'heal') {
+      const healAmt = d.tier === 3 ? 6 : (d.tier === 4 ? 12 : 22);
+      state.castleHp = Math.min(state.castleMaxHp, state.castleHp + healAmt);
+      partyBuff += (d.tier === 5 ? 0.3 : 0.15);
+      addFloat(95, 160, `+${healAmt} HP`, '#69db7c');
+    }
+    if (d.branch === 'def') {
+      const sh = d.tier === 3 ? 12 : (d.tier === 4 ? 25 : 50);
+      state.castleShield += sh;
+      addFloat(95, 185, `+${sh} 실드`, '#74c0fc');
+    }
+  });
+
+  // Base crit chance
+  const maskCrit = state.relics.includes('mask') ? ctx.zeroCount * 0.15 : 0;
+  const baseCrit = 0.1 + state.upgrades.critAll * 0.05 + maskCrit;
+
+  // Tie Ultimate: Meteor/Lightning on all enemies
+  if (ctx.isTieUlt) {
+    state.cam.shake = 15;
+    state.hitStop = 6;
+    const ultDmg = 60 + state.wave * 22;
+    [...state.enemies].forEach(e => {
+      e.frozenTurns = Math.max(e.frozenTurns, 1);
+      damageEnemy(e, ultDmg, true, '#ffd43b', true);
+      spawnBurst(e.x, e.y - 16, '#ffd43b', 18);
+    });
+  }
+
+  // Each hero attacks
+  state.heroes.forEach(h => {
+    if (state.enemies.length === 0) return;
+    const d = HERO_DB[h.id];
+    h.attackAnim = 18;
+
+    const upgBonus = 1 + (d.base === 'knight' ? state.upgrades.atkKnight : d.base === 'mage' ? state.upgrades.atkMage : state.upgrades.atkArcher) * 0.18;
+    let rawDmg = d.atk * ctx.dmgScale * partyBuff * upgBonus;
+    let isCrit = Math.random() < baseCrit;
+
+    // Sort enemies by closest x
+    const sorted = [...state.enemies].sort((a, b) => a.x - b.x);
+    const front = sorted[0];
+
+    if (d.base === 'knight') {
+      if (d.branch === 'agg') {
+        const targets = sorted.slice(0, d.tier === 5 ? 6 : 3);
+        targets.forEach(e => {
+          e.taunted = ctx.betTarget === 'banker' ? 3 : 2;
+          if (d.tier >= 4) e.frozenTurns = Math.max(e.frozenTurns, 1);
+          damageEnemy(e, rawDmg, isCrit, d.color, false);
+        });
+        spawnSlash(front.x, front.y, '#ff6b6b', 45);
+      } else if (d.branch === 'atk') {
+        if (ctx.betTarget === 'player') rawDmg *= 1.3;
+        const targets = sorted.slice(0, d.tier === 5 ? 5 : 3);
+        targets.forEach(e => {
+          const exec = (e.hp / e.maxHp) < 0.35 ? 1.5 : 1;
+          damageEnemy(e, rawDmg * exec, isCrit, '#ffd43b', d.tier === 5);
+        });
+        spawnSlash(front.x, front.y, '#ffd43b', 65);
+      } else {
+        damageEnemy(front, rawDmg, isCrit, d.color, false);
+        spawnSlash(front.x, front.y, d.color, 34);
+      }
+      SFX.hit();
+    }
+    else if (d.base === 'mage') {
+      if (d.branch === 'fire') {
+        const fireMult = 1 + ctx.zeroCount * 0.25;
+        const targets = sorted.slice(0, d.tier === 5 ? 8 : 3);
+        targets.forEach(e => {
+          e.burn += Math.round(rawDmg * 0.35);
+          damageEnemy(e, rawDmg * fireMult, isCrit, '#ff922b', false);
+          spawnBurst(e.x, e.y - 12, '#ff6b2b', 12);
+        });
+        fireProjectile(h.x, h.y - 16, front.x, front.y - 16, '#ff6b2b', 7);
+      } else if (d.branch === 'ice') {
+        const targets = sorted.slice(0, d.tier === 5 ? 8 : 3);
+        targets.forEach(e => {
+          e.freezeStacks += (d.tier === 5 ? 2 : 1);
+          if (e.freezeStacks >= 3) {
+            e.freezeStacks = 0;
+            e.frozenTurns = 2;
+            addFloat(e.x, e.y - 34, '❄️빙결!', '#66d9e8');
+          }
+          damageEnemy(e, rawDmg, isCrit, '#66d9e8', false);
+          spawnBurst(e.x, e.y - 12, '#66d9e8', 10);
+        });
+        fireProjectile(h.x, h.y - 16, front.x, front.y - 16, '#66d9e8', 6);
+      } else {
+        damageEnemy(front, rawDmg, isCrit, d.color, false);
+        fireProjectile(h.x, h.y - 16, front.x, front.y - 16, d.color, 5);
+      }
+      SFX.magic();
+    }
+    else if (d.base === 'archer') {
+      if (d.branch === 'poison') {
+        const targets = sorted.slice(0, d.tier === 5 ? 4 : 2);
+        targets.forEach(e => {
+          e.poison += (d.tier === 5 ? 5 : d.tier === 4 ? 3 : 2);
+          e.armor = Math.max(0, e.armor - 5);
+          damageEnemy(e, rawDmg, isCrit, '#94d82d', false);
+          fireProjectile(h.x, h.y - 16, e.x, e.y - 16, '#94d82d', 4);
+        });
+      } else if (d.branch === 'elf') {
+        let shots = (d.tier === 5 ? 5 : d.tier === 4 ? 4 : 3) * (ctx.hasPair ? 2 : 1);
+        const pierceAll = sorted.slice(0, Math.min(sorted.length, shots));
+        const armorIgnore = d.tier === 5 ? 1.0 : (d.tier === 4 ? 0.75 : 0.5);
+        pierceAll.forEach(e => {
+          damageEnemy(e, rawDmg * 0.85, isCrit, '#38d9a9', armorIgnore >= 1.0, armorIgnore);
+          fireProjectile(h.x, h.y - 16, e.x, e.y - 16, '#63e6be', 4);
+        });
+      } else if (d.branch === 'sniper') {
+        const bossOrHigh = [...state.enemies].sort((a, b) => (b.isBoss - a.isBoss) || (b.hp - a.hp))[0];
+        const allInMult = ctx.isAllIn ? 2.0 : 1.0;
+        const execMult = 1 + (1 - bossOrHigh.hp / bossOrHigh.maxHp) * 0.8;
+        damageEnemy(bossOrHigh, rawDmg * allInMult * execMult, true, '#da77f2', true);
+        fireProjectile(h.x, h.y - 16, bossOrHigh.x, bossOrHigh.y - 16, '#da77f2', 6);
+        state.cam.shake = Math.max(state.cam.shake, 7);
+      } else {
+        const hits = d.tier === 2 ? 2 : 1;
+        for (let k = 0; k < hits; k++) {
+          if (state.enemies.length === 0) break;
+          const t = state.enemies[0];
+          damageEnemy(t, rawDmg, isCrit, '#69db7c', false);
+          fireProjectile(h.x, h.y - 16, t.x, t.y - 16, '#69db7c', 4);
+        }
+      }
+      SFX.hit();
+    }
+  });
+}
+
+function damageEnemy(enemy, amount, isCrit, color, ignoreArmor=false, armorIgnoreRatio=0) {
+  if (!state.enemies.includes(enemy)) return;
+  let dmg = amount;
+  if (isCrit) {
+    dmg *= (enemy.frozenTurns > 0 ? 2.25 : 1.5);
+  }
+  const effArmor = ignoreArmor ? 0 : enemy.armor * (1 - armorIgnoreRatio);
+  dmg = Math.max(1, Math.round(dmg * (100 / (100 + effArmor))));
+
+  enemy.hp -= dmg;
+  enemy.flash = 8;
+  addFloat(enemy.x, enemy.y - 24, (isCrit ? '💥' : '') + dmg, isCrit ? '#ffd43b' : color);
+
+  if (enemy.hp <= 0) {
+    killEnemy(enemy);
+  }
+}
+
+function killEnemy(enemy) {
+  const idx = state.enemies.indexOf(enemy);
+  if (idx === -1) return;
+  state.enemies.splice(idx, 1);
+
+  // Coin drop
+  const pouchMult = state.relics.includes('pouch') ? 1.5 : 1.0;
+  const dropMult = 1 + state.upgrades.coinDrop * 0.15;
+  const reward = Math.round(enemy.reward * pouchMult * dropMult);
+  state.gold += reward;
+  spawnCoins(enemy.x, enemy.y - 10, Math.min(6, Math.max(2, Math.floor(reward / 10))));
+  addFloat(enemy.x, enemy.y - 36, `+${reward}G`, '#ffd369');
+  spawnBurst(enemy.x, enemy.y - 14, enemy.isBoss ? '#ffd43b' : '#ff6b6b', enemy.isBoss ? 36 : 16);
+
+  if (enemy.isBoss) {
+    triggerZoom(enemy.x, enemy.y, 1.5, 45);
+    state.cam.shake = 14;
+    state.hitStop = 6;
+  }
+
+  // Burn death chain explosion!
+  if (enemy.burn > 0) {
+    const expDmg = Math.round(enemy.burn * 1.4);
+    spawnBurst(enemy.x, enemy.y - 12, '#ff6b2b', 22);
+    [...state.enemies].forEach(other => {
+      if (Math.hypot(other.x - enemy.x, other.y - enemy.y) < 110) {
+        damageEnemy(other, expDmg, false, '#ff922b', false);
+      }
+    });
+  }
+
+  // Poison death spread!
+  if (enemy.poison > 0) {
+    [...state.enemies].forEach(other => {
+      if (Math.hypot(other.x - enemy.x, other.y - enemy.y) < 120) {
+        other.poison += Math.max(1, Math.floor(enemy.poison * 0.7));
+        addFloat(other.x, other.y - 30, '☠️전염', '#a9e34b');
+      }
+    });
+  }
+}
+
+function processStatusDoTs(thirdCardDrawn) {
+  [...state.enemies].forEach(e => {
+    if (e.burn > 0) {
+      damageEnemy(e, e.burn, false, '#ff922b', false);
+      e.burn = Math.floor(e.burn * 0.7);
+    }
+    if (e.poison > 0 && state.enemies.includes(e)) {
+      const ticks = thirdCardDrawn ? 2 : 1;
+      for (let t = 0; t < ticks; t++) {
+        if (!state.enemies.includes(e)) break;
+        damageEnemy(e, e.poison * 10, false, '#94d82d', true);
+      }
+    }
+  });
+}
+
+function executeEnemyTurn() {
+  const hasIce = state.heroes.some(h => HERO_DB[h.id].branch === 'ice');
+  const hasDef = state.heroes.some(h => HERO_DB[h.id].branch === 'def');
+  const hasAgg = state.heroes.some(h => HERO_DB[h.id].branch === 'agg');
+
+  state.enemies.forEach(e => {
+    if (e.frozenTurns > 0) {
+      e.frozenTurns--;
+      addFloat(e.x, e.y - 26, '❄️동결', '#66d9e8');
+      return;
+    }
+    let move = e.speed * (hasIce ? 0.55 : 1.0);
+    if (e.taunted > 0) {
+      e.taunted--;
+      move *= 0.2;
+      if (hasAgg) damageEnemy(e, 18 + state.wave * 4, false, '#ff8787', true);
+    }
+    e.x = Math.max(145, e.x - move);
+
+    if (e.x <= 155) {
+      let dmg = Math.round(e.atk * (hasDef ? 0.65 : 1.0));
+      if (state.castleShield > 0) {
+        const absorb = Math.min(state.castleShield, dmg);
+        state.castleShield -= absorb;
+        dmg -= absorb;
+      }
+      if (dmg > 0) {
+        state.castleHp = Math.max(0, state.castleHp - dmg);
+        state.cam.shake = 10;
+        addFloat(85, 190, `-${dmg}`, '#ff4d4d');
+      }
+    }
+  });
+
+  if (state.castleHp <= 0 && !state.gameOver) {
+    state.gameOver = true;
+    document.getElementById('gameOverText').textContent = `WAVE ${state.wave}에서 성채가 함락되었습니다. 영웅 ${state.heroes.length}명과 함께 분전했습니다!`;
+    document.getElementById('gameOverModal').classList.add('open');
+  }
+}
+
+/* =========================================================
+   9. SHOP, SLOT MACHINE & UPGRADES
+   ========================================================= */
+let currentShopTab = 'slot';
+let slotSpinning = false;
+const SLOT_SYMBOLS = ['🪙','⚔️','👑','🎲','💀'];
+
+function openShop(tab='slot') {
+  currentShopTab = tab;
+  document.getElementById('shopGold').textContent = state.gold;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  renderShopTab();
+  document.getElementById('shopModal').classList.add('open');
+}
+
+function renderShopTab() {
+  document.getElementById('shopGold').textContent = state.gold;
+  const box = document.getElementById('shopContent');
+  if (currentShopTab === 'slot') {
+    box.innerHTML = `
+      <div class="slot-box">
+        <div style="font-size:15px; font-weight:bold; color:#ffd369;">⚙️ 황동 태엽 슬롯머신 (1회 30G)</div>
+        <div style="font-size:12px; color:#d8c4a0; margin-top:4px;">🪙x3: 200G | ⚔️x3: 2단계 영웅 소환 | 👑x3: 희귀 유물 | 🎲x3: 3턴 배당2배</div>
+        <div class="reels">
+          <div class="reel" id="reel0">🪙</div>
+          <div class="reel" id="reel1">⚔️</div>
+          <div class="reel" id="reel2">👑</div>
+        </div>
+        <div id="slotResult" style="min-height:22px; font-size:13px; color:#fff; margin-bottom:10px;">레버를 당겨 운명을 시험하세요!</div>
+        <button class="btn btn-gold" id="btnSpinSlot" style="padding:10px 28px; font-size:15px;">🎰 레버 당기기 (30G)</button>
+      </div>
+    `;
+    document.getElementById('btnSpinSlot').onclick = spinSlotMachine;
+  } else if (currentShopTab === 'relic') {
+    let html = '<div class="shop-grid">';
+    RELIC_DB.forEach(r => {
+      const owned = state.relics.includes(r.id);
+      html += `
+        <div class="shop-card">
+          <h4>${r.icon} ${r.name}</h4>
+          <p>${r.desc}</p>
+          <button class="btn ${owned ? '' : 'btn-gold'}" ${owned || state.gold < r.cost ? 'disabled' : ''} onclick="buyRelic('${r.id}')">
+            ${owned ? '보유 중' : `${r.cost}G 구매`}
+          </button>
+        </div>
+      `;
+    });
+    // Deck Scrolls
+    html += `
+      <div class="shop-card">
+        <h4>🔥 덱 소각 주문서</h4>
+        <p>현재 덱에서 2~5점 저효율 카드 3장을 영구 제거합니다.</p>
+        <button class="btn btn-purple" ${state.gold < 60 ? 'disabled' : ''} onclick="buyScroll('burn')">60G 사용</button>
+      </div>
+      <div class="shop-card">
+        <h4>✨ 축복의 9 주문서</h4>
+        <p>현재 덱에 9점 카드 2장을 추가해 내추럴 확률을 높입니다.</p>
+        <button class="btn btn-purple" ${state.gold < 75 ? 'disabled' : ''} onclick="buyScroll('add9')">75G 사용</button>
+      </div>
+      <div class="shop-card">
+        <h4>🌑 공허의 0 주문서</h4>
+        <p>현재 덱에 0점(K) 카드 2장을 추가합니다. (불법사/광대가면 시너지)</p>
+        <button class="btn btn-purple" ${state.gold < 65 ? 'disabled' : ''} onclick="buyScroll('add0')">65G 사용</button>
+      </div>
+    </div>`;
+    box.innerHTML = html;
+  } else if (currentShopTab === 'prob') {
+    const items = [
+      { key:'summonTier2', name:'고급 소환 확률 (+6%)', desc:`영웅 소환 시 즉시 2단계 등장 확률 (현재 ${state.upgrades.summonTier2*6}%)`, cost: 70 + state.upgrades.summonTier2*40 },
+      { key:'slotLuck', name:'슬롯 잭팟 확률 강화', desc:`슬롯머신 3일치 잭팟 확률 상승 (Lv.${state.upgrades.slotLuck})`, cost: 80 + state.upgrades.slotLuck*45 },
+      { key:'coinDrop', name:'전리품 코인 드랍 (+15%)', desc:`적 처치 시 코인 획득량 영구 증가 (현재 +${state.upgrades.coinDrop*15}%)`, cost: 65 + state.upgrades.coinDrop*35 }
+    ];
+    box.innerHTML = '<div class="shop-grid">' + items.map(it => `
+      <div class="shop-card">
+        <h4>⚖️ ${it.name}</h4>
+        <p>${it.desc}</p>
+        <button class="btn btn-blue" ${state.gold < it.cost ? 'disabled' : ''} onclick="buyUpgrade('${it.key}', ${it.cost})">${it.cost}G 강화</button>
+      </div>
+    `).join('') + '</div>';
+  } else if (currentShopTab === 'forge') {
+    const items = [
+      { key:'atkKnight', name:'⚔️ 기사단 무기 연마', desc:`모든 기사 공격력 +18% (Lv.${state.upgrades.atkKnight})`, cost: 60 + state.upgrades.atkKnight*35 },
+      { key:'atkMage', name:'🔮 마탑 지팡이 각인', desc:`모든 법사 공격력 +18% (Lv.${state.upgrades.atkMage})`, cost: 60 + state.upgrades.atkMage*35 },
+      { key:'atkArcher', name:'🏹 궁수대 화살촉 강화', desc:`모든 궁수 공격력 +18% (Lv.${state.upgrades.atkArcher})`, cost: 60 + state.upgrades.atkArcher*35 },
+      { key:'critAll', name:'💥 전체 치명타 확률', desc:`모든 영웅 치명타율 +5% (현재 +${state.upgrades.critAll*5}%)`, cost: 75 + state.upgrades.critAll*40 },
+    ];
+    box.innerHTML = '<div class="shop-grid">' + items.map(it => `
+      <div class="shop-card">
+        <h4>${it.name}</h4>
+        <p>${it.desc}</p>
+        <button class="btn btn-green" ${state.gold < it.cost ? 'disabled' : ''} onclick="buyUpgrade('${it.key}', ${it.cost})">${it.cost}G 강화</button>
+      </div>
+    `).join('') + '</div>';
+  }
+}
+
+async function spinSlotMachine() {
+  if (slotSpinning || state.gold < 30) return;
+  slotSpinning = true;
+  state.gold -= 30;
+  updateHUD();
+  document.getElementById('shopGold').textContent = state.gold;
+  const resEl = document.getElementById('slotResult');
+  resEl.textContent = '회전 중...';
+
+  const jackpotChance = Math.min(0.45, 0.18 + state.upgrades.slotLuck * 0.05);
+  let finalSymbols;
+  if (Math.random() < jackpotChance) {
+    const sym = SLOT_SYMBOLS[Math.floor(Math.random() * 4)]; // Exclude skull
+    finalSymbols = [sym, sym, sym];
+  } else {
+    finalSymbols = [0,1,2].map(() => SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)]);
+  }
+
+  for (let i = 0; i < 12; i++) {
+    for (let r = 0; r < 3; r++) {
+      if (i < 6 + r * 3) {
+        document.getElementById('reel' + r).textContent = SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)];
+      } else {
+        document.getElementById('reel' + r).textContent = finalSymbols[r];
+      }
+    }
+    SFX.slotTick();
+    await delay(70);
+  }
+  for (let r = 0; r < 3; r++) document.getElementById('reel' + r).textContent = finalSymbols[r];
+
+  if (finalSymbols[0] === finalSymbols[1] && finalSymbols[1] === finalSymbols[2]) {
+    const s = finalSymbols[0];
+    SFX.fanfare();
+    if (s === '🪙') {
+      state.gold += 200;
+      resEl.textContent = '🎉 JACKPOT! 200G 획득!';
+      showCutin('🎰 GOLD JACKPOT!', '+200G 대박!');
+    } else if (s === '⚔️') {
+      const t2 = ['knight_2','mage_2','archer_2'][Math.floor(Math.random()*3)];
+      addHero(t2);
+      resEl.textContent = `🎉 JACKPOT! 2단계 영웅 [${HERO_DB[t2].name}] 소환!`;
+    } else if (s === '👑') {
+      const unowned = RELIC_DB.filter(r => !state.relics.includes(r.id));
+      if (unowned.length > 0) {
+        const pick = unowned[Math.floor(Math.random() * unowned.length)];
+        state.relics.push(pick.id);
+        updateRelicUI();
+        resEl.textContent = `🎉 JACKPOT! 희귀 유물 [${pick.name}] 획득!`;
+      } else {
+        state.gold += 180;
+        resEl.textContent = '🎉 유물 풀보유! 대신 180G 획득!';
+      }
+    } else if (s === '🎲') {
+      state.slotBuffTurns += 3;
+      resEl.textContent = '🎉 JACKPOT! 다음 3턴 내추럴·타이 배당 2배!';
+    } else {
+      state.gold += 40;
+      resEl.textContent = '💀 해골 3개... 저주의 환급 +40G!';
+    }
+  } else if (finalSymbols[0] === finalSymbols[1] || finalSymbols[1] === finalSymbols[2] || finalSymbols[0] === finalSymbols[2]) {
+    state.gold += 20;
+    SFX.coin();
+    resEl.textContent = '✨ 2개 일치! 20G 환급!';
+  } else {
+    SFX.fail();
+    resEl.textContent = '아쉽네요! 다음 기회에...';
+  }
+
+  updateHUD();
+  document.getElementById('shopGold').textContent = state.gold;
+  slotSpinning = false;
+}
+
+window.buyRelic = function(id) {
+  const r = RELIC_DB.find(x => x.id === id);
+  if (!r || state.relics.includes(id) || state.gold < r.cost) return;
+  state.gold -= r.cost;
+  state.relics.push(id);
+  SFX.fanfare();
+  updateRelicUI();
+  updateHUD();
+  renderShopTab();
+};
+
+window.buyScroll = function(type) {
+  if (type === 'burn' && state.gold >= 60) {
+    state.gold -= 60;
+    let removed = 0;
+    state.deck = state.deck.filter(c => {
+      if (removed < 3 && c.val >= 2 && c.val <= 5) { removed++; return false; }
+      return true;
+    });
+    logMsg(`🔥 덱에서 저효율 카드 ${removed}장을 소각했습니다!`);
+  } else if (type === 'add9' && state.gold >= 75) {
+    state.gold -= 75;
+    state.deck.push({ rank:'9', suit:'♥', val:9, red:true }, { rank:'9', suit:'♠', val:9, red:false });
+    shuffle(state.deck);
+    logMsg('✨ 덱에 9점 카드 2장을 추가했습니다!');
+  } else if (type === 'add0' && state.gold >= 65) {
+    state.gold -= 65;
+    state.deck.push({ rank:'K', suit:'♦', val:0, red:true }, { rank:'K', suit:'♣', val:0, red:false });
+    shuffle(state.deck);
+    logMsg('🌑 덱에 0점(K) 카드 2장을 추가했습니다!');
+  } else return;
+  SFX.magic();
+  updateShoeUI();
+  updateHUD();
+  renderShopTab();
+};
+
+window.buyUpgrade = function(key, cost) {
+  if (state.gold < cost) return;
+  state.gold -= cost;
+  state.upgrades[key]++;
+  SFX.coin();
+  updateHUD();
+  renderShopTab();
+};
+
+/* =========================================================
+   10. VISUAL FX, CAMERA JUICE & PIXEL ART RENDERER
+   ========================================================= */
+function triggerZoom(x, y, zoom, holdFrames=35) {
+  state.cam.targetX = x;
+  state.cam.targetY = y;
+  state.cam.targetZoom = zoom;
+  state.cam.hold = holdFrames;
+}
+function showCutin(title, sub) {
+  const b = document.getElementById('cutinBanner');
+  document.getElementById('cutinTitle').textContent = title;
+  document.getElementById('cutinSub').textContent = sub;
+  b.classList.add('show');
+  clearTimeout(showCutin._t);
+  showCutin._t = setTimeout(() => b.classList.remove('show'), 1550);
+}
+function spawnBurst(x, y, color, count=14) {
+  for (let i = 0; i < count; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const spd = 1 + Math.random() * 4;
+    state.particles.push({ x, y, vx: Math.cos(ang)*spd, vy: Math.sin(ang)*spd - 1.5, color, life: 22 + Math.random()*16, size: 3 + Math.random()*3 });
+  }
+}
+function spawnSlash(x, y, color, radius) {
+  state.particles.push({ type:'slash', x, y: y-16, color, radius, life: 12, maxLife: 12 });
+}
+function fireProjectile(x1, y1, x2, y2, color, size=5) {
+  state.projectiles.push({ x: x1, y: y1, tx: x2, ty: y2, color, size, life: 14, maxLife: 14 });
+}
+function addFloat(x, y, text, color) {
+  state.floats.push({ x, y, text, color, life: 42 });
+}
+function spawnCoins(x, y, count) {
+  for (let i = 0; i < count; i++) {
+    state.coins.push({ x, y, vx: (Math.random()-0.5)*4, vy: -3 - Math.random()*3, life: 45 });
+  }
+}
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+function drawMedievalBg() {
+  // Stone dungeon wall
+  ctx.fillStyle = '#1b141a';
+  ctx.fillRect(0, 0, 960, 340);
+
+  // Brick pattern
+  ctx.fillStyle = '#251c23';
+  for (let y = 0; y < 145; y += 22) {
+    for (let x = (y % 44 === 0 ? 0 : -24); x < 960; x += 48) {
+      ctx.fillRect(x + 2, y + 2, 44, 18);
+    }
+  }
+
+  // Velvet casino banners on wall
+  [180, 420, 660, 860].forEach(bx => {
+    ctx.fillStyle = '#5c111d';
+    ctx.fillRect(bx, 18, 36, 78);
+    ctx.fillStyle = '#d4a03c';
+    ctx.fillRect(bx - 4, 14, 44, 6);
+    ctx.fillRect(bx + 14, 40, 8, 22);
+    ctx.fillRect(bx + 8, 48, 20, 6);
+  });
+
+  // Flickering Torches (Dave the Diver warm lighting feel)
+  [110, 300, 540, 760].forEach((tx, idx) => {
+    const flick = Math.sin(state.tick * 0.2 + idx * 2) * 5;
+    const grad = ctx.createRadialGradient(tx, 76, 4, tx, 76, 85 + flick);
+    grad.addColorStop(0, 'rgba(255, 175, 64, 0.35)');
+    grad.addColorStop(1, 'rgba(255, 110, 20, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(tx, 76, 85 + flick, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Torch sconce
+    ctx.fillStyle = '#5c4033';
+    ctx.fillRect(tx - 3, 78, 6, 18);
+    ctx.fillStyle = '#ff922b';
+    ctx.fillRect(tx - 4, 68 - (flick>0?2:0), 8, 10);
+    ctx.fillStyle = '#fff3bf';
+    ctx.fillRect(tx - 2, 71, 4, 5);
+  });
+
+  // Floor (Medieval stone & red carpet)
+  ctx.fillStyle = '#2d2329';
+  ctx.fillRect(0, 145, 960, 195);
+  ctx.fillStyle = '#47121b';
+  ctx.fillRect(100, 195, 860, 95);
+  ctx.fillStyle = '#a67c2e';
+  ctx.fillRect(100, 195, 860, 4);
+  ctx.fillRect(100, 286, 860, 4);
+
+  // Allied Castle (Left)
+  ctx.fillStyle = '#493d45';
+  ctx.fillRect(14, 115, 88, 190);
+  ctx.fillStyle = '#63545e';
+  for (let i = 0; i < 4; i++) ctx.fillRect(14 + i*24, 100, 16, 16);
+  ctx.fillStyle = '#24181a';
+  ctx.fillRect(42, 235, 32, 70);
+  ctx.fillStyle = '#d4a03c';
+  ctx.fillRect(40, 233, 36, 4);
+
+  // Castle HP bar
+  const hpRatio = state.castleHp / state.castleMaxHp;
+  ctx.fillStyle = '#111';
+  ctx.fillRect(18, 84, 80, 10);
+  ctx.fillStyle = '#ff5252';
+  ctx.fillRect(20, 86, Math.round(76 * hpRatio), 6);
+  if (state.castleShield > 0) {
+    ctx.fillStyle = '#74c0fc';
+    ctx.fillRect(20, 80, Math.min(76, state.castleShield), 3);
+  }
+}
+
+function drawHeroSprite(h) {
+  const d = HERO_DB[h.id];
+  const bob = Math.sin(state.tick * 0.12 + h.animOffset) * 2;
+  const lunge = h.attackAnim > 0 ? Math.sin((h.attackAnim / 18) * Math.PI) * 18 : 0;
+  if (h.attackAnim > 0) h.attackAnim--;
+
+  const x = Math.round(h.x + lunge);
+  const y = Math.round(h.y + bob);
+  const s = d.tier >= 5 ? 3.2 : (d.tier >= 3 ? 2.6 : 2.1);
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fillRect(x - 10, h.y + 4, 20, 5);
+
+  // Tier 5 Aura
+  if (d.aura) {
+    ctx.strokeStyle = d.aura;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y - 14, 16 + Math.sin(state.tick * 0.2) * 3, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Body (cloak/armor)
+  ctx.fillStyle = d.accent;
+  ctx.fillRect(x - 4*s, y - 8*s, 8*s, 8*s);
+  ctx.fillStyle = d.color;
+  ctx.fillRect(x - 3*s, y - 7*s, 6*s, 6*s);
+
+  // Head
+  ctx.fillStyle = '#ffdfc4';
+  ctx.fillRect(x - 2.5*s, y - 12*s, 5*s, 4.5*s);
+  // Eyes
+  ctx.fillStyle = '#111';
+  ctx.fillRect(x + 0.5*s, y - 10.5*s, 1*s, 1*s);
+
+  // Class headgear & weapon
+  if (d.base === 'knight') {
+    ctx.fillStyle = d.color;
+    ctx.fillRect(x - 3*s, y - 14*s, 6*s, 2.5*s); // helm
+    // Sword
+    ctx.fillStyle = d.tier >= 4 ? '#ffd43b' : '#e9ecef';
+    ctx.fillRect(x + 4*s, y - 12*s, 2*s, 9*s);
+    ctx.fillStyle = '#a67c2e';
+    ctx.fillRect(x + 3*s, y - 4*s, 4*s, 1.5*s);
+  } else if (d.base === 'mage') {
+    ctx.fillStyle = d.accent;
+    ctx.fillRect(x - 4*s, y - 13*s, 8*s, 2*s);
+    ctx.fillRect(x - 2*s, y - 16*s, 4*s, 3*s); // wizard hat
+    // Staff
+    ctx.fillStyle = '#8d5524';
+    ctx.fillRect(x + 4*s, y - 12*s, 1.5*s, 11*s);
+    ctx.fillStyle = d.color;
+    ctx.fillRect(x + 3.2*s, y - 14.5*s, 3*s, 3*s);
+  } else {
+    ctx.fillStyle = d.accent;
+    ctx.fillRect(x - 3*s, y - 13.5*s, 6*s, 2*s); // hood
+    // Bow
+    ctx.fillStyle = '#d4a03c';
+    ctx.fillRect(x + 4*s, y - 10*s, 1.5*s, 8*s);
+    ctx.fillStyle = d.color;
+    ctx.fillRect(x + 5*s, y - 7*s, 3*s, 1.2*s);
+  }
+
+  // Tier stars above head
+  ctx.fillStyle = d.tier === 5 ? '#ffd43b' : '#fff';
+  ctx.font = 'bold 9px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('★'.repeat(d.tier), x, y - 16*s - 2);
+}
+
+function drawEnemySprite(e) {
+  const bob = Math.sin(state.tick * 0.15 + e.x * 0.1) * 2;
+  const x = Math.round(e.x);
+  const y = Math.round(e.y + bob);
+  const s = e.isBoss ? 4.0 : (e.type === 'armor' ? 2.8 : 2.2);
+
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fillRect(x - 10, e.y + 4, 20, 5);
+
+  const bodyCol = e.flash > 0 ? '#ffffff' : (e.frozenTurns > 0 ? '#66d9e8' : (e.isBoss ? '#9c1a1c' : e.type === 'armor' ? '#495057' : e.type === 'goblin' ? '#5c940d' : '#dee2e6'));
+  if (e.flash > 0) e.flash--;
+
+  ctx.fillStyle = bodyCol;
+  ctx.fillRect(x - 3.5*s, y - 9*s, 7*s, 9*s);
+  // Eyes
+  ctx.fillStyle = e.isBoss ? '#ffd43b' : '#ff2a2a';
+  ctx.fillRect(x - 2*s, y - 7*s, 1.5*s, 1.5*s);
+
+  // Boss crown
+  if (e.isBoss) {
+    ctx.fillStyle = '#ffd43b';
+    ctx.fillRect(x - 3*s, y - 12*s, 6*s, 3*s);
+  }
+
+  // HP Bar
+  const w = e.isBoss ? 44 : 28;
+  ctx.fillStyle = '#111';
+  ctx.fillRect(x - w/2, y - 11*s - 8, w, 5);
+  ctx.fillStyle = '#ff5252';
+  ctx.fillRect(x - w/2 + 1, y - 11*s - 7, Math.max(0, Math.round((w-2) * (e.hp / e.maxHp))), 3);
+
+  // Status badges
+  let st = '';
+  if (e.burn > 0) st += '🔥';
+  if (e.frozenTurns > 0) st += '❄️';
+  if (e.poison > 0) st += `☠️${e.poison}`;
+  if (e.taunted > 0) st += '❗';
+  if (st) {
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(st, x, y - 11*s - 12);
+  }
+}
+
+function renderLoop() {
+  requestAnimationFrame(renderLoop);
+  if (state.hitStop > 0) { state.hitStop--; return; }
+  state.tick++;
+
+  // Camera update
+  const c = state.cam;
+  if (c.hold > 0) {
+    c.hold--;
+    if (c.hold === 0) { c.targetZoom = 1; c.targetX = 480; c.targetY = 170; }
+  }
+  c.zoom += (c.targetZoom - c.zoom) * 0.12;
+  c.x += (c.targetX - c.x) * 0.12;
+  c.y += (c.targetY - c.y) * 0.12;
+  const sx = c.shake > 0 ? (Math.random() - 0.5) * c.shake : 0;
+  const sy = c.shake > 0 ? (Math.random() - 0.5) * c.shake : 0;
+  if (c.shake > 0) c.shake *= 0.85;
+  if (c.shake < 0.4) c.shake = 0;
+
+  ctx.save();
+  ctx.clearRect(0, 0, 960, 340);
+  ctx.translate(480 + sx, 170 + sy);
+  ctx.scale(c.zoom, c.zoom);
+  ctx.translate(-c.x, -c.y);
+
+  drawMedievalBg();
+
+  // Draw heroes & enemies sorted by Y
+  const entities = [
+    ...state.heroes.map(h => ({ y: h.y, draw: () => drawHeroSprite(h) })),
+    ...state.enemies.map(e => ({ y: e.y, draw: () => drawEnemySprite(e) }))
+  ].sort((a, b) => a.y - b.y);
+  entities.forEach(ent => ent.draw());
+
+  // Projectiles
+  for (let i = state.projectiles.length - 1; i >= 0; i--) {
+    const p = state.projectiles[i];
+    p.life--;
+    const t = 1 - (p.life / p.maxLife);
+    const px = p.x + (p.tx - p.x) * t;
+    const py = p.y + (p.ty - p.y) * t - Math.sin(t * Math.PI) * 24;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(px - p.size/2, py - p.size/2, p.size, p.size);
+    if (p.life <= 0) state.projectiles.splice(i, 1);
+  }
+
+  // Particles
+  for (let i = state.particles.length - 1; i >= 0; i--) {
+    const p = state.particles[i];
+    p.life--;
+    if (p.type === 'slash') {
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius * (1 - p.life / p.maxLife * 0.4), -0.9, 0.9);
+      ctx.stroke();
+    } else {
+      p.x += p.vx; p.y += p.vy; p.vy += 0.14;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x, p.y, p.size, p.size);
+    }
+    if (p.life <= 0) state.particles.splice(i, 1);
+  }
+
+  // Flying Coins
+  for (let i = state.coins.length - 1; i >= 0; i--) {
+    const cn = state.coins[i];
+    cn.life--;
+    if (cn.life > 25) { cn.x += cn.vx; cn.y += cn.vy; cn.vy += 0.25; }
+    else { cn.x += (440 - cn.x) * 0.18; cn.y += (10 - cn.y) * 0.18; }
+    ctx.fillStyle = '#ffd43b';
+    ctx.fillRect(cn.x - 3, cn.y - 3, 6, 6);
+    ctx.fillStyle = '#fff3bf';
+    ctx.fillRect(cn.x - 1, cn.y - 1, 2, 2);
+    if (cn.life <= 0) state.coins.splice(i, 1);
+  }
+
+  // Floating Numbers
+  for (let i = state.floats.length - 1; i >= 0; i--) {
+    const f = state.floats[i];
+    f.life--; f.y -= 0.7;
+    ctx.font = 'bold 13px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#000';
+    ctx.fillText(f.text, f.x + 1, f.y + 1);
+    ctx.fillStyle = f.color;
+    ctx.fillText(f.text, f.x, f.y);
+    if (f.life <= 0) state.floats.splice(i, 1);
+  }
+
+  ctx.restore();
+}
+
+/* =========================================================
+   11. UI UPDATES & EVENT LISTENERS
+   ========================================================= */
+function logMsg(msg) { document.getElementById('battleLog').textContent = msg; }
+
+function updateHUD() {
+  document.getElementById('uiWave').textContent = state.wave;
+  document.getElementById('uiHp').textContent = `${state.castleHp}/${state.castleMaxHp}`;
+  document.getElementById('uiShield').textContent = state.castleShield;
+  document.getElementById('uiGold').textContent = state.gold;
+  document.getElementById('uiBuffBadge').textContent = state.slotBuffTurns > 0 ? `🎲 배당2배 (${state.slotBuffTurns}턴)` : '';
+  document.getElementById('btnQuickSummon').disabled = state.gold < 50;
+}
+
+function updateShoeUI() {
+  document.getElementById('uiDeckCount').textContent = `${state.deck.length}장`;
+  const counts = Array(10).fill(0);
+  state.deck.forEach(c => counts[c.val]++);
+  const grid = document.getElementById('shoeGrid');
+  grid.innerHTML = counts.map((cnt, val) => `
+    <div class="shoe-cell"><span class="num">${val}점</span><span class="cnt">${cnt}장</span></div>
+  `).join('');
+}
+
+function updateRelicUI() {
+  const bar = document.getElementById('relicBar');
+  bar.innerHTML = state.relics.map(id => {
+    const r = RELIC_DB.find(x => x.id === id);
+    return `<div class="relic-chip" title="${r.desc}">${r.icon} ${r.name}</div>`;
+  }).join('');
+}
+
+function updateRosterUI() {
+  const bar = document.getElementById('rosterBar');
+  const grouped = {};
+  state.heroes.forEach(h => { grouped[h.id] = (grouped[h.id] || 0) + 1; });
+  bar.innerHTML = Object.entries(grouped).map(([id, cnt]) => {
+    const d = HERO_DB[id];
+    const cls = d.tier >= 5 ? 't5' : (d.tier === 4 ? 't4' : (d.tier === 3 ? 't3' : ''));
+    return `<div class="hero-badge ${cls}">${'★'.repeat(d.tier)} ${d.name} ×${cnt}</div>`;
+  }).join('');
+}
+
+// Bindings
+document.querySelectorAll('.bet-target').forEach(el => {
+  el.onclick = () => {
+    document.querySelectorAll('.bet-target').forEach(x => x.classList.remove('active'));
+    el.classList.add('active');
+    state.betTarget = el.dataset.target;
+    SFX.chip();
+  };
+});
+document.querySelectorAll('.amt-btn').forEach(el => {
+  el.onclick = () => {
+    document.querySelectorAll('.amt-btn').forEach(x => x.classList.remove('active'));
+    el.classList.add('active');
+    state.betAmount = el.dataset.amt === 'all' ? 'all' : parseInt(el.dataset.amt, 10);
+    SFX.chip();
+  };
+});
+document.getElementById('btnDeal').onclick = playBaccaratTurn;
+
+document.getElementById('btnQuickSummon').onclick = () => {
+  if (state.gold < 50) return;
+  state.gold -= 50;
+  const isT2 = Math.random() < (state.upgrades.summonTier2 * 0.06);
+  const pool = isT2 ? ['knight_2','mage_2','archer_2'] : ['knight_1','mage_1','archer_1'];
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  addHero(pick);
+  logMsg(`⚔️ [${HERO_DB[pick].name}] 영웅을 소환했습니다!`);
+  updateHUD();
+};
+
+document.getElementById('btnPeek').onclick = () => {
+  if (state.peekUsed) return;
+  state.peekUsed = true;
+  document.getElementById('btnPeek').disabled = true;
+  const next4 = state.deck.slice(-4).reverse();
+  document.getElementById('peekBox').innerHTML = '🔮 다음 4장: ' + next4.map(c =>
+    `<b style="color:${c.red?'#ff8787':'#fff'}">${c.rank}${c.suit}(${c.val})</b>`
+  ).join(' · ');
+  SFX.magic();
+};
+
+document.getElementById('btnOpenShop').onclick = () => openShop(currentShopTab);
+document.getElementById('btnCloseShop').onclick = () => document.getElementById('shopModal').classList.remove('open');
+document.querySelectorAll('.tab-btn').forEach(b => b.onclick = () => openShop(b.dataset.tab));
+
+document.getElementById('btnMute').onclick = () => {
+  SFX.muted = !SFX.muted;
+  document.getElementById('btnMute').textContent = SFX.muted ? '🔇 소리 OFF' : '🔊 소리 ON';
+};
+
+/* =========================================================
+   12. INIT
+   ========================================================= */
+state.deck = createShoe();
+addHero('knight_1', true);
+addHero('mage_1', true);
+addHero('archer_1', true);
+spawnWave(1);
+updateShoeUI();
+updateHUD();
+updateRosterUI();
+renderLoop();
+</script>
+</body>
+</html>
